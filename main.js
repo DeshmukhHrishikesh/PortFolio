@@ -1,203 +1,224 @@
 /**
- * ============================================================
- * HRISHIKESH DESHMUKH — PORTFOLIO
- * File: js/main.js
- * Covers:
- *  1. Theme toggle (dark/light)
- *  2. Navbar scroll behaviour
- *  3. Mobile menu
- *  4. Typed headline animation
- *  5. Scroll-reveal (IntersectionObserver)
- *  6. Skill bar animation
- *  7. Active nav link highlighting
- *  8. Back-to-top button
- *  9. Contact form handling
- * 10. Skill filter tabs
- * ============================================================
+ * ================================================================
+ * JAVA FULL STACK DEVELOPER — PORTFOLIO
+ * js/main.js
+ *
+ * Sections:
+ *  1. Theme Toggle
+ *  2. Navbar Scroll Behaviour
+ *  3. Mobile Menu
+ *  4. Typed Role Animation
+ *  5. Scroll Reveal (IntersectionObserver)
+ *  6. Skill Bar Animation
+ *  7. Skill Filter Tabs
+ *  8. Active Nav Link (Scroll Spy)
+ *  9. Back-to-Top Button
+ * 10. Contact Form Validation & Submit
+ * ================================================================
  */
 
-/* ============================================================
+'use strict';
+
+/* ================================================================
    1. THEME TOGGLE
-   ============================================================ */
-const themeBtn   = document.getElementById('theme-btn');
-const themeIcon  = document.getElementById('theme-icon');
-const root       = document.documentElement;
+   Reads saved preference → applies immediately → toggles on click
+   ================================================================ */
+const themeBtn  = document.getElementById('theme-btn');
+const themeIcon = document.getElementById('theme-icon');
+const root      = document.documentElement;
 
-/**
- * Apply a theme and persist it to localStorage.
- * @param {'dark'|'light'} theme
- */
-function applyTheme(theme) {
-  root.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
-  // Swap icon: moon for dark, sun for light
-  themeIcon.textContent = theme === 'dark' ? '🌙' : '☀️';
+function setTheme(t) {
+  root.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+  // Moon = dark mode, Sun = light mode
+  themeIcon.textContent = t === 'dark' ? '🌙' : '☀️';
 }
 
-// Load saved preference or system preference
-const savedTheme = localStorage.getItem('theme');
-const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-applyTheme(savedTheme || (systemDark ? 'dark' : 'light'));
+// On load: respect saved preference or OS setting
+const saved  = localStorage.getItem('theme');
+const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+setTheme(saved || (osDark ? 'dark' : 'light'));
 
 themeBtn.addEventListener('click', () => {
   const current = root.getAttribute('data-theme') || 'dark';
-  applyTheme(current === 'dark' ? 'light' : 'dark');
+  setTheme(current === 'dark' ? 'light' : 'dark');
 });
 
-/* ============================================================
-   2. NAVBAR — SCROLL SHADOW
-   ============================================================ */
-const navbar = document.getElementById('navbar');
+
+/* ================================================================
+   2. NAVBAR SCROLL BEHAVIOUR
+   Adds .scrolled class once page scrolls past 20px
+   ================================================================ */
+const navbar = document.getElementById('nav');
 
 window.addEventListener('scroll', () => {
-  // Add shadow class once user scrolls more than 20px
   navbar.classList.toggle('scrolled', window.scrollY > 20);
 }, { passive: true });
 
-/* ============================================================
+
+/* ================================================================
    3. MOBILE MENU
-   ============================================================ */
-const hamburger  = document.getElementById('hamburger');
-const mobileMenu = document.getElementById('mobile-menu');
+   Toggles the full-screen overlay and locks body scroll
+   ================================================================ */
+const hamburger = document.getElementById('hamburger');
+const mobMenu   = document.getElementById('mob-menu');
 
 hamburger.addEventListener('click', () => {
   const open = hamburger.classList.toggle('open');
-  mobileMenu.classList.toggle('open', open);
-  // Lock body scroll when menu is open
+  mobMenu.classList.toggle('open', open);
+  hamburger.setAttribute('aria-expanded', open);
   document.body.style.overflow = open ? 'hidden' : '';
 });
 
-// Close menu when a link is clicked
-mobileMenu.querySelectorAll('a').forEach(link => {
-  link.addEventListener('click', () => {
+// Close when any link is clicked
+mobMenu.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
     hamburger.classList.remove('open');
-    mobileMenu.classList.remove('open');
+    mobMenu.classList.remove('open');
+    hamburger.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
   });
 });
 
-/* ============================================================
-   4. TYPED HEADLINE ANIMATION
-   ============================================================ */
-const typedEl    = document.getElementById('typed-text');
-const typedCursor = document.getElementById('typed-cursor');
 
-// Roles to cycle through
-const roles = [
-  'Java Developer',
-  'Spring Boot Engineer',
-  'Full Stack Developer',
-  'Microservices Architect',
+/* ================================================================
+   4. TYPED ROLE ANIMATION
+   Cycles through an array of roles with a blinking cursor
+   ================================================================ */
+const typedEl  = document.getElementById('typed');
+const roles    = [
+  'Java Full Stack Developer',
+  'Spring Boot Architect',
+  'Microservices Engineer',
   'Backend Specialist',
+  'Cloud-Native Developer',
 ];
 
-let roleIndex    = 0;
-let charIndex    = 0;
-let isDeleting   = false;
-const typeSpeed  = 85;   // ms per character when typing
-const deleteSpeed = 45;  // ms per character when deleting
-const holdTime   = 2000; // ms to hold completed word
+let ri = 0;   // role index
+let ci = 0;   // character index
+let del = false; // currently deleting?
 
-/**
- * Recursive typing animation — types, holds, deletes, moves to next role.
- */
-function typeLoop() {
-  const currentRole = roles[roleIndex];
+const TYPE_SPEED   = 80;   // ms per char when typing
+const DELETE_SPEED = 40;   // ms per char when deleting
+const HOLD         = 1900; // ms to hold completed word
 
-  if (!isDeleting) {
-    // Add one character
-    typedEl.textContent = currentRole.slice(0, charIndex + 1);
-    charIndex++;
+function type() {
+  const role = roles[ri];
 
-    if (charIndex === currentRole.length) {
-      // Finished typing: hold, then start deleting
-      isDeleting = true;
-      setTimeout(typeLoop, holdTime);
+  if (!del) {
+    // Add next character
+    typedEl.textContent = role.slice(0, ++ci);
+    if (ci === role.length) {
+      // Word complete — pause, then start deleting
+      del = true;
+      setTimeout(type, HOLD);
       return;
     }
-    setTimeout(typeLoop, typeSpeed);
   } else {
-    // Remove one character
-    typedEl.textContent = currentRole.slice(0, charIndex - 1);
-    charIndex--;
-
-    if (charIndex === 0) {
-      // Finished deleting: move to next role
-      isDeleting = false;
-      roleIndex  = (roleIndex + 1) % roles.length;
+    // Remove last character
+    typedEl.textContent = role.slice(0, --ci);
+    if (ci === 0) {
+      // All deleted — move to next role
+      del = false;
+      ri  = (ri + 1) % roles.length;
     }
-    setTimeout(typeLoop, deleteSpeed);
   }
+
+  setTimeout(type, del ? DELETE_SPEED : TYPE_SPEED);
 }
 
-// Kick off after a short delay so page has settled
-setTimeout(typeLoop, 600);
+setTimeout(type, 500); // slight delay before starting
 
-/* ============================================================
-   5. SCROLL-REVEAL (IntersectionObserver)
-   ============================================================ */
 
-/**
- * Observe all .reveal and .reveal-stagger elements.
- * When they enter the viewport, add .visible to trigger CSS transitions.
- */
+/* ================================================================
+   5. SCROLL REVEAL
+   Adds .on to .reveal and .stagger elements when they enter viewport
+   ================================================================ */
 const revealObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        // Unobserve after reveal so we don't toggle it back
-        revealObserver.unobserve(entry.target);
+  entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('on');
+        revealObserver.unobserve(e.target); // only fire once
       }
     });
   },
   { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
 );
 
-document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+document.querySelectorAll('.reveal, .stagger').forEach(el => {
   revealObserver.observe(el);
 });
 
-/* ============================================================
-   6. SKILL BAR ANIMATION
-   ============================================================ */
 
-/**
- * When a skill card enters the viewport, add .in-view
- * which triggers the CSS scaleX transition on .skill-bar.
- */
-const skillObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('in-view');
-        skillObserver.unobserve(entry.target);
+/* ================================================================
+   6. SKILL BAR ANIMATION
+   Adds .seen when card enters viewport → CSS animates scaleX
+   ================================================================ */
+const barObserver = new IntersectionObserver(
+  entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('seen');
+        barObserver.unobserve(e.target);
       }
     });
   },
-  { threshold: 0.3 }
+  { threshold: 0.35 }
 );
 
-document.querySelectorAll('.skill-card').forEach(card => {
-  skillObserver.observe(card);
+document.querySelectorAll('.sk-card').forEach(c => barObserver.observe(c));
+
+
+/* ================================================================
+   7. SKILL FILTER TABS
+   Shows/hides skill cards by data-category attribute
+   ================================================================ */
+const tabs   = document.querySelectorAll('.sk-tab');
+const skCards = document.querySelectorAll('.sk-card');
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+
+    // 1. Update active tab
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    const filter = tab.dataset.filter;
+
+    // 2. Show / hide cards
+    skCards.forEach(card => {
+      const match = filter === 'all' || card.dataset.cat === filter;
+      card.style.display = match ? '' : 'none';
+
+      if (match) {
+        // Re-trigger the appear animation
+        card.style.animation = 'none';
+        void card.offsetWidth; // force reflow
+        card.style.animation = '';
+        // Re-observe for bar animation
+        card.classList.remove('seen');
+        barObserver.observe(card);
+      }
+    });
+  });
 });
 
-/* ============================================================
-   7. ACTIVE NAV LINK — SCROLL SPY
-   ============================================================ */
-const sections  = document.querySelectorAll('section[id]');
-const navLinks  = document.querySelectorAll('.nav-links a, .mobile-menu a');
+
+/* ================================================================
+   8. ACTIVE NAV LINK — SCROLL SPY
+   Highlights the nav link whose section is currently in view
+   ================================================================ */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a, .mob-menu a');
 
 const spyObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const id = entry.target.getAttribute('id');
-        navLinks.forEach(link => {
-          link.classList.toggle(
-            'active',
-            link.getAttribute('href') === `#${id}`
-          );
+  entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        navLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === `#${id}`);
         });
       }
     });
@@ -205,125 +226,87 @@ const spyObserver = new IntersectionObserver(
   { rootMargin: '-40% 0px -55% 0px' }
 );
 
-sections.forEach(section => spyObserver.observe(section));
+sections.forEach(s => spyObserver.observe(s));
 
-/* ============================================================
-   8. BACK-TO-TOP BUTTON
-   ============================================================ */
-const backTopBtn = document.getElementById('back-top');
+
+/* ================================================================
+   9. BACK-TO-TOP BUTTON
+   Appears after scrolling 500px; smooth-scrolls to top on click
+   ================================================================ */
+const topBtn = document.getElementById('back-top');
 
 window.addEventListener('scroll', () => {
-  // Show after scrolling 500px
-  backTopBtn.classList.toggle('visible', window.scrollY > 500);
+  topBtn.classList.toggle('on', window.scrollY > 500);
 }, { passive: true });
 
-backTopBtn.addEventListener('click', () => {
+topBtn.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-/* ============================================================
-   9. CONTACT FORM HANDLING
-   ============================================================ */
-const contactForm   = document.getElementById('contact-form');
-const formStatus    = document.getElementById('form-status');
-const submitBtn     = document.getElementById('submit-btn');
 
-contactForm.addEventListener('submit', async (e) => {
+/* ================================================================
+   10. CONTACT FORM — VALIDATION & SUBMIT
+   ================================================================ */
+const form     = document.getElementById('c-form');
+const status   = document.getElementById('f-status');
+const submitBtn = document.getElementById('submit-btn');
+
+form.addEventListener('submit', async e => {
   e.preventDefault();
 
-  // Basic validation
-  const name    = contactForm.querySelector('[name="name"]').value.trim();
-  const email   = contactForm.querySelector('[name="email"]').value.trim();
-  const message = contactForm.querySelector('[name="message"]').value.trim();
+  const name    = form.name.value.trim();
+  const email   = form.email.value.trim();
+  const subject = form.subject.value.trim();
+  const message = form.message.value.trim();
 
+  // ── Validation ──
   if (!name || !email || !message) {
-    showStatus('Please fill in all fields.', 'error');
+    showStatus('Please fill in all required fields.', 'err');
     return;
   }
-  if (!isValidEmail(email)) {
-    showStatus('Please enter a valid email address.', 'error');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showStatus('Please enter a valid email address.', 'err');
     return;
   }
 
-  // Simulate sending (replace with real API endpoint)
+  // ── Submit ──
   submitBtn.textContent = 'Sending…';
-  submitBtn.disabled = true;
+  submitBtn.disabled    = true;
 
   try {
-    // ⚠️ Replace this URL with your Formspree/EmailJS/backend endpoint
-    // await fetch('https://formspree.io/f/YOUR_ID', { method: 'POST', body: new FormData(contactForm) });
-    await fakeDelay(1200); // Remove this line when using a real endpoint
-    showStatus('Message sent! I\'ll get back to you soon.', 'success');
-    contactForm.reset();
+    /**
+     * Replace the fakeSubmit call with a real endpoint:
+     *
+     * Option A — Formspree (free tier, easy):
+     *   await fetch('https://formspree.io/f/YOUR_FORM_ID', {
+     *     method: 'POST',
+     *     headers: { 'Content-Type': 'application/json' },
+     *     body: JSON.stringify({ name, email, subject, message })
+     *   });
+     *
+     * Option B — EmailJS:
+     *   await emailjs.send('SERVICE_ID', 'TEMPLATE_ID', { name, email, message });
+     */
+    await fakeSubmit();
+
+    showStatus("Message sent! I'll get back to you within 24 hours.", 'ok');
+    form.reset();
   } catch {
-    showStatus('Something went wrong. Try emailing me directly.', 'error');
+    showStatus('Something went wrong. Please email me directly.', 'err');
   } finally {
-    submitBtn.textContent = 'Send Message';
-    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send Message →';
+    submitBtn.disabled    = false;
   }
 });
 
-/** Display a status message below the form. */
+/** Displays a status message for 5 seconds then clears it */
 function showStatus(msg, type) {
-  formStatus.textContent = msg;
-  formStatus.className   = `form-status ${type}`;
-  // Auto-hide after 5 seconds
-  setTimeout(() => {
-    formStatus.className = 'form-status';
-  }, 5000);
+  status.textContent  = msg;
+  status.className    = `f-status ${type}`;
+  setTimeout(() => { status.className = 'f-status'; }, 5000);
 }
 
-/** Basic email format check. */
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+/** Simulates a 1.2s async request — DELETE when using a real API */
+function fakeSubmit() {
+  return new Promise(res => setTimeout(res, 1200));
 }
-
-/** Simulated async delay — remove when using a real API. */
-function fakeDelay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/* ============================================================
-   10. SKILL FILTER TABS
-   ============================================================ */
-const skillTabs  = document.querySelectorAll('.skill-tab');
-const skillCards = document.querySelectorAll('.skill-card');
-
-skillTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    // Update active tab
-    skillTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-
-    const filter = tab.dataset.filter;
-
-    skillCards.forEach(card => {
-      const match = filter === 'all' || card.dataset.category === filter;
-
-      if (match) {
-        // Show with small stagger
-        card.style.display = '';
-        // Re-trigger appear animation
-        card.style.animation = 'none';
-        // Force reflow
-        void card.offsetWidth;
-        card.style.animation = '';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-
-    // Re-observe newly visible cards for skill bar animation
-    document.querySelectorAll('.skill-card:not([style*="none"])').forEach(card => {
-      card.classList.remove('in-view');
-      skillObserver.observe(card);
-    });
-  });
-});
-
-/* ============================================================
-   INIT — Trigger hero reveal immediately (no scroll needed)
-   ============================================================ */
-document.querySelectorAll('.hero .reveal').forEach(el => {
-  el.classList.add('visible');
-});
